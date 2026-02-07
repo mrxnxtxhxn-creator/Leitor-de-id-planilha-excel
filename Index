@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner de Pacotes para Excel</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        #reader { width: 100%; max-width: 500px; border: 2px solid #333; }
+        #scanned-list { margin-top: 20px; width: 100%; max-width: 500px; }
+        .btn { padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    </style>
+</head>
+<body>
+
+    <h2>Scanner de IDs de Pacote</h2>
+    
+    <div id="reader"></div>
+
+    <div id="controls">
+        <button class="btn" onclick="downloadExcel()">Baixar Planilha Excel</button>
+        <button class="btn" style="background:#dc3545" onclick="clearList()">Limpar Lista</button>
+    </div>
+
+    <div id="scanned-list">
+        <h3>IDs Capturados:</h3>
+        <table id="idTable">
+            <thead>
+                <tr><th>Data/Hora</th><th>ID do Pacote</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        let scannedData = [];
+
+        // Configuração do Scanner
+        const html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
+        // Inicia a câmera traseira
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            config,
+            (decodedText) => {
+                // Evita duplicados imediatos
+                if (!scannedData.some(item => item.id === decodedText)) {
+                    addToList(decodedText);
+                    // Feedback visual/sonoro pode ser adicionado aqui
+                    alert("ID Lido: " + decodedText);
+                }
+            }
+        );
+
+        function addToList(id) {
+            const now = new Date().toLocaleString();
+            scannedData.push({ data: now, id: id });
+            
+            const tableBody = document.querySelector("#idTable tbody");
+            const row = `<tr><td>${now}</td><td>${id}</td></tr>`;
+            tableBody.innerHTML = row + tableBody.innerHTML;
+        }
+
+        function downloadExcel() {
+            if (scannedData.length === 0) return alert("Nenhum dado capturado!");
+            
+            const worksheet = XLSX.utils.json_to_sheet(scannedData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Pacotes");
+            
+            // Gera o arquivo e inicia o download
+            XLSX.writeFile(workbook, "IDs_Pacotes.xlsx");
+        }
+
+        function clearList() {
+            if(confirm("Deseja limpar a lista?")) {
+                scannedData = [];
+                document.querySelector("#idTable tbody").innerHTML = "";
+            }
+        }
+    </script>
+</body>
+</html>
